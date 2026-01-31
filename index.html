@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>صندوق البلالية الطبي</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{font-family:Tahomа,Arial;background:#f4f6f8;margin:0}
+header{background:#2c3e50;color:#fff;padding:25px;text-align:center}
+section{background:#fff;margin:20px auto;padding:20px;max-width:1100px;border-radius:10px}
+h2{color:#2c3e50}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ddd;padding:10px}
+th{background:#34495e;color:#fff}
+input,select,button{padding:10px;width:100%;margin:5px 0}
+button{background:#27ae60;color:#fff;border:none;cursor:pointer}
+button:hover{opacity:.9}
+.hidden{display:none}
+.note{background:#f9f9f9;padding:15px;border-right:5px solid #27ae60}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>صندوق البلالية الطبي</h1>
+<p>برمجة وتنفيذ: محمد هارون</p>
+</header>
+
+<section class="note">
+<p><strong>قال تعالى:</strong><br>
+(وتعاونوا على البر والتقوى ولا تعاونوا على الإثم والعدوان)</p>
+<p>تم إنشاء هذا الصندوق لمساعدة بعضنا في الحالات الطارئة.</p>
+
+<h3>شروط الصندوق</h3>
+<ul>
+<li>تقييم الحالة بقرار الإدارة</li>
+<li>الصرف حصراً من الإدارة</li>
+<li>تأمين صحي للمشتركين فقط</li>
+<li>لا تُصرف الوصفات الدوائية</li>
+<li>الدفع شهري – أول 10 أيام – الحد الأدنى 25 ألف</li>
+</ul>
+
+<h3>إدارة الصندوق</h3>
+<p>
+قاسم طالب – ضياء شحادة – حسن الخطيب – رامي باكير – نورس عبد السلام – محمد قويدر – هشام الخطيب
+</p>
+</section>
+
+<!-- LOGIN -->
+<section id="loginSection">
+<h2>دخول الإدارة</h2>
+<input id="email" placeholder="الإيميل">
+<input id="password" type="password" placeholder="كلمة المرور">
+<button onclick="login()">دخول</button>
+<p id="loginMsg"></p>
+</section>
+
+<!-- ADMIN -->
+<section id="adminSection" class="hidden">
+<h2>لوحة الإدارة</h2>
+
+<h3>إضافة مشترك</h3>
+<input id="new-name" placeholder="اسم المشترك">
+<input id="new-amount" type="number" placeholder="المبلغ">
+<select id="new-currency">
+<option value="SYP">ليرة سورية</option>
+<option value="USD">دولار</option>
+</select>
+<button onclick="addSubscriber()">إضافة</button>
+
+<h3>إضافة مصروف</h3>
+<input id="exp-desc" placeholder="وصف المصروف">
+<input id="exp-amount" type="number" placeholder="المبلغ">
+<select id="exp-currency">
+<option value="SYP">ليرة سورية</option>
+<option value="USD">دولار</option>
+</select>
+<input id="exp-beneficiary" placeholder="المستفيد">
+<button onclick="addExpense()">إضافة</button>
+
+<button onclick="logout()" style="background:#c0392b">تسجيل خروج</button>
+</section>
+
+<section>
+<h2>المشتركين</h2>
+<table>
+<thead>
+<tr><th>#</th><th>الاسم</th><th>المبلغ</th><th>العملة</th><th>التاريخ</th></tr>
+</thead>
+<tbody id="subs"></tbody>
+</table>
+</section>
+
+<section>
+<h2>المصروفات</h2>
+<table>
+<thead>
+<tr><th>#</th><th>الوصف</th><th>المبلغ</th><th>العملة</th><th>المستفيد</th><th>التاريخ</th></tr>
+</thead>
+<tbody id="exps"></tbody>
+</table>
+</section>
+
+<script>
+const supabase = supabaseJs.createClient(
+  "https://dgvntkasssumrjtvjecu.supabase.co",
+  "sb_publishable_h89AtG7W6CNKUa7NEY5SUg_FI3B5TrW"
+);
+
+async function login(){
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value
+  });
+  if(error){ loginMsg.innerText = error.message; return; }
+  loginSection.classList.add("hidden");
+  adminSection.classList.remove("hidden");
+}
+
+async function logout(){
+  await supabase.auth.signOut();
+  adminSection.classList.add("hidden");
+  loginSection.classList.remove("hidden");
+}
+
+async function loadData(){
+  const s = await supabase.from("subscribers").select("*").order("id");
+  subs.innerHTML="";
+  s.data?.forEach((r,i)=>{
+    subs.innerHTML+=`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.amount}</td><td>${r.currency}</td><td>${r.date}</td></tr>`;
+  });
+
+  const e = await supabase.from("expenses").select("*").order("id");
+  exps.innerHTML="";
+  e.data?.forEach((r,i)=>{
+    exps.innerHTML+=`<tr><td>${i+1}</td><td>${r.description}</td><td>${r.amount}</td><td>${r.currency}</td><td>${r.beneficiary||""}</td><td>${r.date}</td></tr>`;
+  });
+}
+
+async function addSubscriber(){
+  await supabase.from("subscribers").insert([{
+    name:new-name.value,
+    amount:new-amount.value,
+    currency:new-currency.value
+  }]);
+  loadData();
+}
+
+async function addExpense(){
+  await supabase.from("expenses").insert([{
+    description:exp-desc.value,
+    amount:exp-amount.value,
+    currency:exp-currency.value,
+    beneficiary:exp-beneficiary.value
+  }]);
+  loadData();
+}
+
+loadData();
+</script>
+
+</body>
+</html>
